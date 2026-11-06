@@ -1,6 +1,38 @@
-# 运行时数据
-data/history.json
+# 运行时数据（趋势快照等本地状态，可重建）
+data/
+
+# 环境变量与凭证（示例模板仍允许提交）
+.env
+.env.*
+!.env.example
+.dev.vars*
+*.key
+*.pem
+*.p12
+.netrc
+*.token
+
+# 日志、缓存与工具产物
 *.log
+logs/
+.cache/
+coverage/
+*.tsbuildinfo
+.wrangler/
+.vercel/
+.netlify/
+
+# 本地数据库、归档与系统临时文件
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.tmp
+*.bak
+*~
+Thumbs.db
+desktop.ini
+*.swp
 
 # 构建产物（工作流中使用 dist/ 作为上传目录）
 dist/
@@ -14,3 +46,9 @@ node_modules/
 # 外部参考项目（独立仓库，非本站代码，不纳入发布）
 edgeever/
 edgeever-analysis.md
+
+# 本地分析与临时产物（截图、无头浏览器配置、临时脚本）
+.shots/
+.tmp-*
+.tmp_*
+.tmp-worker-dist/

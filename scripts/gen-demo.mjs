@@ -1,7 +1,9 @@
-// 生成静态演示数据快照 demo.json
+// 生成静态数据快照 demo.json
 // 用法：node scripts/gen-demo.mjs [输出目录]
 // 环境变量 LIVE_API_BASE 指定线上/本地 API 地址（默认 http://localhost:4173）
-// GitHub Actions 中若配置了 vars.LIVE_API_BASE，则每次部署/定时构建时刷新快照。
+//
+// 原则：只为真实采集成功的源写入真实条目。不可达源写入 status=unavailable + 原因，
+//       绝不生成「示例热点」之类的模拟内容，避免静态预览误导读者。
 
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -15,19 +17,16 @@ async function getJson(url) {
   return res.json();
 }
 
-function demoBoard(s) {
+function unavailable(s, reason) {
   return {
     id: s.id,
     name: s.name,
     cat: s.cat,
-    adapter: "demo",
-    updated: "",
+    status: "unavailable",
+    reason,
+    verifiedAt: new Date().toISOString(),
+    items: [],
     trends: {},
-    items: [
-      { title: `${s.name} · 示例热点 ①（静态演示）`, url: "", hot: null },
-      { title: `${s.name} · 示例热点 ②（静态演示）`, url: "", hot: null },
-      { title: `${s.name} · 示例热点 ③（静态演示）`, url: "", hot: null },
-    ],
   };
 }
 
@@ -38,7 +37,6 @@ const main = async () => {
   const boards = {};
   let live = 0;
 
-  // 并发 8 抓取全部源；不可达源用带明确标识的演示条目填充
   const queue = [...sources];
   await Promise.all(
     Array.from({ length: 8 }, async () => {
@@ -47,11 +45,11 @@ const main = async () => {
         if (!s) return;
         try {
           const json = await getJson(`${BASE}/api/board/${s.id}?limit=30`);
-          if (json.code !== 200 || !json.data.items?.length) throw new Error("empty");
-          boards[s.id] = json.data;
+          if (json.code !== 200 || !json.data?.items?.length) throw new Error("empty");
+          boards[s.id] = { status: "ok", verifiedAt: new Date().toISOString(), data: json.data };
           live++;
         } catch {
-          boards[s.id] = demoBoard(s);
+          boards[s.id] = unavailable(s, "该上游在此采集环境未返回数据（官方实例/网络限制或源端故障）");
         }
       }
     })
@@ -62,21 +60,46 @@ const main = async () => {
     const d = await getJson(`${BASE}/api/60s/60s`);
     if (d.code === 200 && d.data?.news) digest = d.data;
   } catch {
-    // 无日报数据时前端会显示错误状态
+    // 日报缺失时前端展示明确的不可用状态
   }
+
+  // 时间线：服务端真实快照批次 + 当前批次的真实变动事件
+  let batches = [];
+  try {
+    const tl = await getJson(`${BASE}/api/timeline`);
+    batches = tl?.data?.batches || [];
+  } catch {
+    // 快照历史不可用时不编造时间线
+  }
+  const current = { t: Date.now(), sources: [], events: [], current: true };
+  for (const s of sources) {
+    const b = boards[s.id];
+    if (b.status !== "ok") continue;
+    current.sources.push({ id: s.id, name: s.name, cat: s.cat, count: b.data.items.length });
+    b.data.items.forEach((it, i) => {
+      const t = b.data.trends?.[it.title];
+      if (!t) return;
+      if (t.isNew) current.events.push({ kind: "new", source: s.name, id: s.id, title: it.title, rank: i + 1 });
+      else if (typeof t.delta === "number" && t.delta >= 5)
+        current.events.push({ kind: "up", source: s.name, id: s.id, title: it.title, rank: i + 1, delta: t.delta });
+    });
+  }
+  const timeline = { batches: [current, ...batches].slice(0, 10) };
 
   const out = {
     generatedAt: new Date().toISOString(),
     source: BASE,
     liveSources: live,
+    snapshotPolicy: "仅写入真实采集数据；不可达源标记 status=unavailable，不生成模拟条目",
     cats,
     sources,
     digest,
     boards,
+    timeline,
   };
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(path.join(OUT_DIR, "demo.json"), JSON.stringify(out));
-  console.log(`demo.json 已生成：${live}/${sources.length} 源为实时数据，输出 ${OUT_DIR}`);
+  console.log(`demo.json 已生成：${live}/${sources.length} 源为真实采集数据；其余标记不可用，输出 ${OUT_DIR}`);
 };
 
 main().catch((e) => {

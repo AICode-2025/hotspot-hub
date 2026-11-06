@@ -411,6 +411,53 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // 采集批次时间线（来自真实快照历史，不含任何模拟数据）
+    if (url.pathname === "/api/timeline") {
+      await loadHistory();
+      const buckets = new Map();
+      for (const [key, snaps] of Object.entries(history)) {
+        if (!key.startsWith("board:")) continue;
+        const id = key.slice(6);
+        const src = SOURCES.find((x) => x.id === id);
+        const name = src?.name || id;
+        const cat = src?.cat || "";
+        snaps.forEach((snap, i) => {
+          const bucketT = Math.floor(snap.t / (5 * 60 * 1000)) * 5 * 60 * 1000;
+          const b = buckets.get(bucketT) || { t: bucketT, sources: [], events: [] };
+          b.sources.push({ id, name, cat, count: Object.keys(snap.ranks || {}).length });
+          const prev = snaps[i - 1]?.ranks;
+          if (prev && b.events.length < 24) {
+            for (const [title, rank] of Object.entries(snap.ranks || {})) {
+              const old = prev[title];
+              if (old == null) b.events.push({ kind: "new", source: name, id, title, rank });
+              else if (old - rank >= 5) b.events.push({ kind: "up", source: name, id, title, rank, delta: old - rank });
+              if (b.events.length >= 24) break;
+            }
+          }
+          buckets.set(bucketT, b);
+        });
+      }
+      const batches = [...buckets.values()]
+        .sort((a, b) => b.t - a.t)
+        .slice(0, 10)
+        .map((b) => ({ ...b, sources: b.sources.slice(0, 60) }));
+      sendJson(res, 200, { code: 200, message: "ok", data: { batches } });
+      return;
+    }
+
+    // 单个话题的真实排名历史（趋势曲线唯一数据来源）
+    if (url.pathname === "/api/topic") {
+      await loadHistory();
+      const id = url.searchParams.get("id") || "";
+      const title = url.searchParams.get("title") || "";
+      const snaps = history[`board:${id}`] || [];
+      const points = snaps
+        .map((s) => ({ t: s.t, rank: s.ranks?.[title] ?? null }))
+        .filter((p) => p.rank != null);
+      sendJson(res, 200, { code: 200, message: "ok", data: { id, title, points } });
+      return;
+    }
+
     // 兼容保留：60s / newsnow 原始透传
     const m60s = url.pathname.match(/^\/api\/60s\/([\w-]+)$/);
     if (m60s) {

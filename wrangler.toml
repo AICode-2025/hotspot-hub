@@ -1,0 +1,22 @@
+name = "hotspot-api"
+main = "worker/index.js"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+# D1 绑定：代码里统一用 env.DB
+[[d1_databases]]
+binding = "DB"
+database_name = "hotspot"
+database_id = "8a34b302-510a-4958-98e4-5d5334f34341"
+migrations_dir = "worker/migrations"
+
+# 每 10 分钟采集一批热榜；日报与指标按窗口在 scheduled 内判断
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+ALLOW_ORIGINS = "https://aicode-2025.github.io,http://localhost:8080,http://localhost:4173,http://localhost:8787"
+DEPLOYED_AT = ""
+
+[observability]
+enabled = true

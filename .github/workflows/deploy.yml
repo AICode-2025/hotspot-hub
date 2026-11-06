@@ -1,0 +1,128 @@
+name: Deploy Frontend (Pages) + Backend (Workers/D1)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "public/**"
+      - "worker/**"
+      - "scripts/**"
+      - "wrangler.toml"
+      - ".github/workflows/deploy.yml"
+  schedule:
+    - cron: "0 */6 * * *" # 每 6 小时刷新静态快照（可选）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- 前端
+  frontend:
+    name: Frontend → GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build static artifact
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+          LIVE_API_BASE: ${{ vars.LIVE_API_BASE }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+          BUILD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp -r public/. dist/
+          node scripts/gen-config.mjs dist
+          if [ -n "${LIVE_API_BASE}" ]; then
+            echo "::notice::refreshing demo snapshot from ${LIVE_API_BASE}"
+            node scripts/gen-demo.mjs dist
+          fi
+          if [ -n "${CUSTOM_DOMAIN}" ]; then
+            echo "${CUSTOM_DOMAIN}" > dist/CNAME
+          fi
+          test -f dist/index.html
+          test -f dist/js/app.js
+          test -f dist/config.js
+          # 前端产物不允许包含服务端逻辑
+          if find dist -name "*.mjs" -o -name "server.js" | grep -q .; then
+            echo "::error::frontend artifact contains server-side files"; exit 1
+          fi
+          echo "frontend artifact: $(du -sh dist | cut -f1)"
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify Pages URL
+        run: |
+          code=$(curl -sSL -o /dev/null -w "%{http_code}" "${{ steps.deployment.outputs.page_url }}")
+          echo "Pages HTTP ${code}"
+          test "${code}" = "200"
+
+  # ---------------------------------------------------------------- 后端
+  backend:
+    name: Backend → Cloudflare Workers + D1
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Skip when Cloudflare secrets are absent
+        if: env.CF_TOKEN == ''
+        run: |
+          echo "::notice::CLOUDFLARE_API_TOKEN 未配置，跳过后端部署（前端仍会发布）"
+
+      - name: Apply D1 migrations
+        if: env.CF_TOKEN != ''
+        run: npx --yes wrangler@4 d1 migrations apply hotspot --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+
+      - name: Deploy Worker
+        if: env.CF_TOKEN != ''
+        run: |
+          npx --yes wrangler@4 deploy --var DEPLOYED_AT:"$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ env.CF_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT }}
+
+      - name: Smoke test API
+        if: env.CF_TOKEN != '' && vars.API_BASE != ''
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            if curl -fsS "${{ vars.API_BASE }}/api/v1/health" | grep -q '"ok":true'; then
+              echo "API healthy"; exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::API health check failed"; exit 1

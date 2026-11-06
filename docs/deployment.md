@@ -4,7 +4,7 @@
 
 | 形态 | 地址 | 后端 | 数据 |
 |---|---|---|---|
-| GitHub Pages（本工作流） | `https://<owner>.github.io/<repo>/` | 无（纯静态） | `demo.json` 部署时快照；未接入的源显示带「静态演示」标识的示例条目 |
+| GitHub Pages（本工作流） | `https://<owner>.github.io/<repo>/` | 无（纯静态） | `demo.json` 部署时的真实采集快照；未接入的源标明原因且不展示任何模拟内容，可在「内容后台」人工录入并显式标注 |
 | Node 服务（VPS / Cloudflare Workers） | 自有域名 | `server.js` | 49 源实时采集 + 趋势快照 + `/api/*` 开放接口 |
 
 ## 一、Pages 自动部署流程
@@ -45,17 +45,17 @@ npm start          # 零依赖，Node ≥ 18，默认 4173 端口
 | Actions 报 `HttpError: Resource not accessible` | 仓库 Pages 未启用或 GITHUB_TOKEN 权限不足 | Settings → Pages → Source 选 GitHub Actions；Settings → Actions → Workflow permissions 设为 Read/Write |
 | 站点 404 / CSS 失效 | 使用了绝对路径 `/style.css` | 已全部改为 `./` 相对路径；确认 `dist/index.html` 存在（工作流内有断言） |
 | 页面显示「数据源目录加载失败」 | `demo.json` 缺失或格式错误 | 检查 `public/demo.json` 是否提交；执行 `node scripts/gen-demo.mjs public` 重新生成 |
-| 页面显示「静态演示快照」 | 预期行为：Pages 无后端 | 配置 `LIVE_API_BASE` 指向已部署 Node 服务，或在 VPS/CF 上直接运行 Node 版本 |
+| 页面显示「静态预览」横幅 | 预期行为：Pages 无后端，仅展示部署时采集的真实快照 | 配置 `LIVE_API_BASE` 指向已部署 Node 服务以刷新快照，或在 VPS/CF 上直接运行 Node 版本 |
 | 自定义域名证书错误 | DNS 未生效 / 未开启 HTTPS | 确认 CNAME 解析到 `<owner>.github.io`，等待证书签发后勾选 Enforce HTTPS |
 | 首次推送后 Actions 列表为空 | 空仓库的初始 push 通常不会触发该 push 内新增的工作流 | 在 Actions 页手动运行一次 `workflow_dispatch`；之后凡涉及 `public/**`、`scripts/gen-demo.mjs`、工作流文件的 push 都会自动触发（本次上线已验证） |
 | 改了文档却没有新构建 | 工作流 `paths` 过滤仅监听站点资产相关路径 | 属于预期行为；需要重新部署时可手动 dispatch，或刷新 `public/demo.json` 后推送 |
 | 定时构建未触发 | 仓库 60 天无活动时 GitHub 会暂停 schedule | 手动触发一次 `workflow_dispatch`，或改用外部 cron 调 API 触发 |
-| 构建时 `gen-demo.mjs` 失败 | `LIVE_API_BASE` 指向的服务不可达 | 脚本对单源失败会自动降级为演示条目，整体失败时检查该地址 `/api/health` |
+| 构建时 `gen-demo.mjs` 失败 | `LIVE_API_BASE` 指向的服务不可达 | 脚本对单源失败会标记 `status=unavailable` 并记录原因（绝不生成模拟条目）；整体失败时检查该地址 `/api/health` |
 
 ## 五、本地验证静态模式
 
 ```bash
 cd public
 python -m http.server 8080
-# 打开 http://localhost:8080 —— 无 /api/* 时应自动进入静态演示模式
+# 打开 http://localhost:8080 —— 无 /api/* 时应进入静态预览模式，顶部横幅说明快照时间与真实源数量
 ```
