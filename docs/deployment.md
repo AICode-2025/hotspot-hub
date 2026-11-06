@@ -47,6 +47,7 @@ npm start          # 零依赖，Node ≥ 18，默认 4173 端口
 | 页面显示「数据源目录加载失败」 | `demo.json` 缺失或格式错误 | 检查 `public/demo.json` 是否提交；执行 `node scripts/gen-demo.mjs public` 重新生成 |
 | 页面显示「静态演示快照」 | 预期行为：Pages 无后端 | 配置 `LIVE_API_BASE` 指向已部署 Node 服务，或在 VPS/CF 上直接运行 Node 版本 |
 | 自定义域名证书错误 | DNS 未生效 / 未开启 HTTPS | 确认 CNAME 解析到 `<owner>.github.io`，等待证书签发后勾选 Enforce HTTPS |
+| 首次推送后 Actions 列表为空 | 空仓库的初始 push 通常不会触发该 push 内新增的工作流 | 在 Actions 页手动运行一次 `workflow_dispatch`；之后每次 `push` 都会正常自动触发（本次上线已验证） |
 | 定时构建未触发 | 仓库 60 天无活动时 GitHub 会暂停 schedule | 手动触发一次 `workflow_dispatch`，或改用外部 cron 调 API 触发 |
 | 构建时 `gen-demo.mjs` 失败 | `LIVE_API_BASE` 指向的服务不可达 | 脚本对单源失败会自动降级为演示条目，整体失败时检查该地址 `/api/health` |
 
