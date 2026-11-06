@@ -10,3 +10,7 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# 外部参考项目（独立仓库，非本站代码，不纳入发布）
+edgeever/
+edgeever-analysis.md
