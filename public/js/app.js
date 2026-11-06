@@ -193,6 +193,11 @@ async function boot() {
   window.__SOURCES__ = state.sources;
   window.__API_MODE__ = state.mode;
 
+  // 侧栏日期先给默认值，晨报页加载到日报后会覆盖为日报日期
+  if (!$("sideDate").textContent || $("sideDate").textContent === "—") {
+    $("sideDate").textContent = new Date().toLocaleDateString("zh-CN");
+  }
+
   paintMode();
   await router.render();
 

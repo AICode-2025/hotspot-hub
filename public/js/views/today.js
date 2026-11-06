@@ -107,15 +107,16 @@ function digestHtml(d) {
 
 function fillArchive(dates, current) {
   const bar = $("#archiveBar");
-  if (!bar || !dates?.length) return;
-  const list = dates.slice(0, 14);
+  if (!bar) return;
+  bar.querySelector(".archive-dates")?.remove();
+  // 去重并排除当前日期：只有存在往期时才显示切换条
+  const list = [...new Set(dates || [])].filter((d) => d && d !== current).slice(0, 7);
+  if (!list.length) return;
   const wrap = document.createElement("div");
-  wrap.className = "tabs";
-  wrap.style.marginBlockStart = ".5rem";
-  wrap.style.flexBasis = "100%";
-  wrap.innerHTML = list
-    .map((d) => `<a class="tab" href="#/today?date=${esc(d)}" ${d === current ? 'aria-selected="true"' : ""}>${esc(d.slice(5))}</a>`)
-    .join("");
+  wrap.className = "archive-dates";
+  wrap.innerHTML = `<span class="note">往期</span>${list
+    .map((d) => `<a class="date-chip" href="#/today?date=${esc(d)}">${esc(d.slice(5))}</a>`)
+    .join("")}`;
   bar.appendChild(wrap);
 }
 
