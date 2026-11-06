@@ -197,6 +197,22 @@ jobs:
 4. 环境变量填入 `ALLOW_ORIGINS`；D1 绑定在 Dashboard → Settings → Bindings 添加（binding 名 `DB`）
 5. 之后每次 push 到 `main` 自动构建并部署 Worker；构建日志在 Worker 详情页可见
 
+**面板字段对照（Workers Builds）**
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| Root directory | `/` | 仓库根目录，`wrangler.toml` 在此 |
+| Build command | `npm run build` | 由 `scripts/build.mjs` 产出 `dist/`（前端静态资源），对 Worker 部署无副作用 |
+| Deploy command | `npx wrangler deploy` | 读取 `wrangler.toml`，上传 `worker/index.js` |
+| Build variables | `API_BASE`（可选） | 构建前端时注入 Worker 地址；不部署前端可留空 |
+| Bindings | D1 → `DB` | 也可由 `wrangler.toml` 的 `[[d1_databases]]` 自动带上 |
+
+> **常见报错**：`npm error Missing script: "build"`。
+> 原因：早期 `package.json` 只有 `start`，没有 `build`。已在 v2.0 补齐，并新增 `scripts/build.mjs`、`wrangler` devDependency 与 `package-lock.json`（供 `npm ci` 使用）。
+> 若不想构建前端、只部署 Worker，可把 Build command 留空，Deploy command 仍为 `npx wrangler deploy`。
+
+> **不要同时开启方案 A 与方案 B**：两者都会部署 `hotspot-api`，后执行的会覆盖前一个版本。用 Workers Builds 时，请把 `.github/workflows/deploy.yml` 的 `backend` job 关掉（或删除），只保留 `frontend` job。
+
 注意：
 - 方案 B 只覆盖 **Worker**，前端仍需 GitHub Pages 的 Actions；两者可并存，但**不要同时用 A/B 部署同一个 Worker**，避免版本互相覆盖。
 - Workers Builds 不支持自动跑 D1 迁移，迁移仍需手动或在 GitHub Actions 里单独跑。

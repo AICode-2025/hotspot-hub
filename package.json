@@ -1,12 +1,22 @@
 {
   "name": "hotspot-aggregator",
-  "version": "1.0.0",
-  "description": "热点聚合站：每天 60 秒读懂世界 + 多平台热搜榜（数据来自 60s API 与 NewsNow）",
+  "version": "2.0.0",
+  "description": "热点晨报：每天 60 秒读懂世界 + 49 路热榜；Cloudflare Workers + D1 后端，GitHub Pages 前端",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node scripts/build.mjs dist",
+    "dev:worker": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:dry": "wrangler deploy --dry-run --outdir .wrangler-dry",
+    "db:migrate": "wrangler d1 migrations apply hotspot --remote",
+    "db:migrate:local": "wrangler d1 migrations apply hotspot --local",
+    "snapshot": "node scripts/gen-demo.mjs public"
+  },
+  "devDependencies": {
+    "wrangler": "^4.158.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   }
 }
