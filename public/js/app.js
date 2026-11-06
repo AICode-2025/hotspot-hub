@@ -66,8 +66,17 @@ function paintMode() {
   if (mode === "static") {
     banner.hidden = false;
     banner.dataset.tone = "";
+    const tried = state.failures?.length
+      ? `<br><span class="note">已尝试：${esc(state.failures.join("；"))}</span>`
+      : "";
     banner.innerHTML = `静态快照 · 采集于 ${esc(state.snapshotAt ? new Date(state.snapshotAt).toLocaleString("zh-CN", { hour12: false }) : "未知时间")}。
-      实时接口未连接，页面内容不会自动更新。<a href="#/sources">查看数据源状态</a>`;
+      实时接口未连接，页面内容不会自动更新。${tried}
+      <button class="btn btn--quiet" type="button" data-hard-reload style="min-height:28px;padding:.1rem .45rem;margin-inline-start:.4rem">强制刷新</button>
+      <a href="#/sources">查看数据源状态</a>`;
+    banner.querySelector("[data-hard-reload]")?.addEventListener("click", () => {
+      // 清掉可能被缓存成旧版本的 config.js 后重载
+      location.href = `${location.origin}${location.pathname}?nocache=${Date.now()}${location.hash}`;
+    });
   } else if (mode === "error") {
     banner.hidden = false;
     banner.dataset.tone = "error";

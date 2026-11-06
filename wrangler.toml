@@ -15,8 +15,14 @@ migrations_dir = "worker/migrations"
 crons = ["*/10 * * * *"]
 
 [vars]
-ALLOW_ORIGINS = "https://aicode-2025.github.io,http://localhost:8080,http://localhost:4173,http://localhost:8787"
+# 公开只读 API：默认放行所有来源（含 IDE 预览、自定义域、移动端 WebView）。
+# 如需收紧，改成逗号分隔的白名单，例如 "https://aicode-2025.github.io,http://localhost:8080"
+ALLOW_ORIGINS = "*"
 DEPLOYED_AT = ""
+
+# 版本元数据：/api/v1/health 用 createdOn 反映真实部署时间（Git 构建与 CLI 部署都适用）
+[version_metadata]
+binding = "CF_VERSION_METADATA"
 
 [observability]
 enabled = true

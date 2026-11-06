@@ -17,6 +17,7 @@ export const state = {
   health: null,
   snapshotAt: null,
   lastError: "",
+  failures: [],
 };
 
 export class ApiError extends Error {
@@ -34,6 +35,18 @@ function resolveBase() {
   const meta = document.querySelector('meta[name="api-base"]')?.content?.trim();
   if (meta) return meta.replace(/\/$/, "");
   return ""; // 同源
+}
+
+// 已知后端地址：即使 config.js 被浏览器缓存成旧版本（API_BASE 为空），也能连上
+const KNOWN_BASES = ["https://hotspot-api.danding.workers.dev"];
+
+function candidateBases() {
+  const configured = resolveBase();
+  const list = [];
+  if (configured) list.push(configured);
+  list.push(...KNOWN_BASES);
+  list.push(""); // 同源兜底
+  return [...new Set(list)];
 }
 
 async function request(path, { timeout = TIMEOUT, retry = 1 } = {}) {
@@ -63,35 +76,46 @@ async function request(path, { timeout = TIMEOUT, retry = 1 } = {}) {
 /* ---------------- 初始化与探测 ---------------- */
 
 export async function init() {
-  state.base = resolveBase();
-  try {
-    const meta = await request("/api/v1/meta", { timeout: 6000, retry: 0 });
-    if (meta?.code === 200 && meta.data?.sources) {
+  state.failures = [];
+
+  // 依次尝试配置地址 → 已知 Worker 地址 → 同源
+  for (const base of candidateBases()) {
+    const label = base || "(同源)";
+    state.base = base;
+    try {
+      const meta = await request("/api/v1/meta", { timeout: 6000, retry: 0 });
+      if (meta?.code !== 200 || !meta.data?.sources) throw new ApiError("parse", "接口结构不符合预期");
       state.mode = "live";
       state.cats = meta.data.cats || [];
       state.sources = meta.data.sources || [];
       state.snapshotAt = meta.data.deployedAt || null;
+      state.lastError = "";
       return state;
-    }
-    throw new ApiError("parse", "接口结构不符合预期");
-  } catch (e) {
-    try {
-      const legacy = await request("/api/sources", { timeout: 6000, retry: 0 });
-      if (legacy?.code === 200 && legacy.data?.sources) {
-        state.mode = "legacy";
-        state.cats = legacy.data.cats || [];
-        state.sources = legacy.data.sources || [];
-        return state;
-      }
-      throw new ApiError("parse", "旧接口结构异常");
-    } catch {
-      await loadSnapshot();
-      if (state.mode === "static") return state;
-      state.mode = "error";
-      state.lastError = e?.message || "无法连接数据服务";
-      return state;
+    } catch (e) {
+      state.failures.push(`${label} → ${e.kind}${e.code ? ` ${e.code}` : ""}：${e.message}`);
     }
   }
+
+  // 同源旧接口（本地 node server.js）
+  try {
+    const legacy = await request("/api/sources", { timeout: 6000, retry: 0 });
+    if (legacy?.code === 200 && legacy.data?.sources) {
+      state.mode = "legacy";
+      state.cats = legacy.data.cats || [];
+      state.sources = legacy.data.sources || [];
+      return state;
+    }
+    throw new ApiError("parse", "旧接口结构异常");
+  } catch (e) {
+    state.failures.push(`legacy → ${e.kind}：${e.message}`);
+  }
+
+  await loadSnapshot();
+  state.lastError = state.failures.join("；");
+  if (state.mode === "static") return state;
+  state.mode = "error";
+  if (!state.lastError) state.lastError = "无法连接数据服务";
+  return state;
 }
 
 async function loadSnapshot() {

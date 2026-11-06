@@ -24,15 +24,18 @@ const fail = (message, code = 502) => json({ code, message }, code);
 
 function corsHeaders(req, env) {
   const origin = req.headers.get("origin") || "";
-  const allow = String(env.ALLOW_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const hit = allow.includes(origin) ? origin : allow[0] || "*";
-  return {
+  const allow = String(env.ALLOW_ORIGINS || "*").split(",").map((s) => s.trim()).filter(Boolean);
+  // 公开只读 API：默认允许任意来源；配置了白名单则按白名单回显
+  const wildcard = allow.length === 0 || allow.includes("*");
+  const hit = wildcard ? "*" : (allow.includes(origin) ? origin : allow[0]);
+  const headers = {
     "access-control-allow-origin": hit,
     "access-control-allow-methods": "GET,OPTIONS",
     "access-control-allow-headers": "content-type,authorization",
     "access-control-max-age": "86400",
-    vary: "origin",
   };
+  if (hit !== "*") headers.vary = "origin";
+  return headers;
 }
 
 async function fetchJson(url, timeout = 8000, headers = {}) {
@@ -628,6 +631,11 @@ async function handleSources(env) {
   });
 }
 
+function deployedAt(env) {
+  const vm = env.CF_VERSION_METADATA || {};
+  return vm.timestamp || vm.createdOn || env.DEPLOYED_AT || null;
+}
+
 async function handleHealth(env) {
   const stats = env.DB
     ? await env.DB.prepare(`SELECT COUNT(*) AS n FROM snapshots`).first().catch(() => null)
@@ -635,10 +643,25 @@ async function handleHealth(env) {
   return ok({
     ok: true,
     version: VERSION,
-    deployedAt: env.DEPLOYED_AT || null,
+    deployedAt: deployedAt(env),
     sources: SOURCES.length,
     snapshots: stats?.n || 0,
     d1: Boolean(env.DB),
+    ts: Date.now(),
+  });
+}
+
+// 诊断端点：返回实际收到的 Origin 与将要回写的 CORS 头，便于排查跨域问题
+async function handleDiag(request, env) {
+  return ok({
+    version: VERSION,
+    deployedAt: deployedAt(env),
+    origin: request.headers.get("origin") || null,
+    referer: request.headers.get("referer") || null,
+    allowOrigins: env.ALLOW_ORIGINS || null,
+    willReturn: corsHeaders(request, env),
+    d1: Boolean(env.DB),
+    colo: request.cf?.colo || null,
     ts: Date.now(),
   });
 }
@@ -811,6 +834,7 @@ export default {
       else if (p === "/api/v1/media") res = await handleMedia(env, url);
       else if (p === "/api/v1/sources") res = await handleSources(env);
       else if (p === "/api/v1/health") res = await handleHealth(env);
+      else if (p === "/api/v1/diag") res = await handleDiag(request, env);
       else res = fail("接口不存在", 404);
     } catch (e) {
       res = fail(`服务端错误：${e.message}`, 500);

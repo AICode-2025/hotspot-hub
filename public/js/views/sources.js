@@ -39,7 +39,10 @@ export async function render() {
         ${healthCard(state.mode === "static" ? "warn" : "ok", state.mode === "static" ? "快照" : "实时", "数据模式")}
       </div>
       ${state.mode === "static"
-        ? `<div class="mode-banner" style="margin-block-end:var(--sp-4)">静态快照模式：来源状态取自构建时的采集结果，不能实时重试。部署 Cloudflare Worker 后可获得实时状态。</div>`
+        ? `<div class="mode-banner" style="margin-block-end:var(--sp-4)">
+            静态快照模式：来源状态取自构建时的采集结果，不能实时重试。
+            ${state.failures?.length ? `<br><span class="note">接口连接失败：${esc(state.failures.join("；"))}</span>` : ""}
+           </div>`
         : ""}
       <div class="table-wrap">
         <table>
