@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>热点中枢 · Hotspot Hub — 交互原型</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23a8322a'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='%23f7f2e7' font-family='serif' font-weight='bold'%3E枢%3C/text%3E%3C/svg%3E" />
+<style>
+:root{
+  color-scheme: light dark;
+  --paper: light-dark(oklch(0.965 0.014 85), oklch(0.19 0.012 70));
+  --ink: light-dark(oklch(0.24 0.022 60), oklch(0.9 0.015 80));
+  --ink-soft: light-dark(oklch(0.42 0.02 65), oklch(0.68 0.015 75));
+  --muted: light-dark(oklch(0.55 0.02 75), oklch(0.55 0.015 75));
+  --hairline: light-dark(oklch(0.78 0.025 80), oklch(0.38 0.02 70));
+  --rowline: light-dark(oklch(0.9 0.015 82), oklch(0.26 0.015 70));
+  --accent: light-dark(oklch(0.52 0.17 30), oklch(0.68 0.15 35));
+  --accent-ink: light-dark(oklch(0.97 0.012 80), oklch(0.16 0.015 60));
+  --wash: light-dark(oklch(0.93 0.02 80), oklch(0.24 0.015 70));
+  --green: light-dark(oklch(0.55 0.12 155), oklch(0.7 0.12 155));
+  --fd: "Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",serif;
+  --fb: "Noto Sans SC","Source Han Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --fn: Georgia,"Times New Roman",serif;
+  --mono: ui-monospace,Consolas,"Cascadia Code",monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse 120% 60% at 50% -10%, light-dark(oklch(0.94 0.02 82), oklch(0.22 0.014 70)), transparent 70%),var(--paper);color:var(--ink);font-family:var(--fb);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.sheet{width:min(1100px,100% - clamp(2rem,6vw,5rem));margin-inline:auto;padding-block:1.6rem 3rem}
+
+/* 报头与导航 */
+.masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-bottom:.9rem}
+.brand{display:flex;align-items:center;gap:.7rem}
+.seal{display:grid;place-items:center;width:3rem;height:3rem;background:var(--accent);color:var(--accent-ink);font-family:var(--fd);font-size:1.7rem;font-weight:700;border-radius:4px;transform:rotate(-3deg)}
+h1{margin:0;font-family:var(--fd);font-weight:900;font-size:clamp(1.7rem,4.5vw,2.5rem);letter-spacing:.12em}
+.brand small{display:block;font-family:var(--fb);font-weight:400;font-size:.68rem;letter-spacing:.28em;color:var(--muted)}
+.mast-meta{text-align:right;font-size:.75rem;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.rule{border-top:3px solid var(--ink);border-bottom:1px solid var(--ink);height:5px;margin-bottom:.6rem}
+nav{display:flex;gap:.2rem;flex-wrap:wrap;border-bottom:1px solid var(--hairline);margin-bottom:1.4rem}
+nav button{appearance:none;border:none;background:none;font:inherit;font-size:.95rem;padding:.55rem 1rem;cursor:pointer;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s}
+nav button:hover{color:var(--ink)}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+section[hidden]{display:none}
+
+/* 通用 */
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-bottom:1px solid var(--hairline);padding-bottom:.5rem;margin-bottom:1rem}
+.sec-head h2{margin:0;font-family:var(--fd);font-weight:800;font-size:1.4rem;letter-spacing:.06em}
+.sec-head h2::before{content:"§";color:var(--accent);margin-right:.45em;font-weight:400}
+.note{font-size:.75rem;color:var(--muted)}
+.btn{appearance:none;font:inherit;font-size:.8125rem;padding:.28rem .9rem;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;cursor:pointer;transition:all .18s}
+.btn:hover{background:var(--accent);color:var(--accent-ink)}
+.btn.solid{background:var(--accent);color:var(--accent-ink)}
+.chip{display:inline-block;font-size:.68rem;padding:.06em .6em;border:1px solid var(--hairline);border-radius:999px;color:var(--ink-soft);margin-right:.35em}
+.trend{display:inline-block;margin-left:.45em;font-family:var(--fn);font-size:.72em;vertical-align:.12em}
+.trend.up{color:var(--accent)} .trend.down{color:var(--green)} .trend.flat{color:var(--muted);opacity:.7}
+.trend.new{font-family:var(--fb);font-size:.62em;font-weight:700;color:var(--accent-ink);background:var(--accent);padding:.14em .5em .18em;border-radius:3px;vertical-align:.2em}
+
+/* 晨报 */
+.daily{columns:2;column-gap:2.5rem;column-rule:1px solid var(--hairline);margin:0;padding:0;list-style:none;counter-reset:n}
+.daily li{break-inside:avoid;position:relative;padding-left:2.1rem;margin-bottom:.6rem;counter-increment:n}
+.daily li::before{content:counter(n,decimal-leading-zero);position:absolute;left:0;font-family:var(--fn);font-style:italic;color:var(--accent)}
+.tip{margin:1.3rem 0 0;padding:.85rem 1.15rem;border-left:3px solid var(--accent);background:var(--wash);font-family:var(--fd);color:var(--ink-soft);font-size:.95em}
+@media(max-width:640px){.daily{columns:1}}
+
+/* 热榜 */
+.tabs{display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.8rem}
+.tab{appearance:none;border:1px solid transparent;background:none;cursor:pointer;font:inherit;font-size:.85rem;padding:.28rem .85rem;color:var(--ink-soft);border-radius:999px;transition:all .2s}
+.tab:hover{color:var(--ink);background:var(--wash)}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.kw-input{width:100%;font:inherit;font-size:.875rem;color:var(--ink);background:none;border:none;border-bottom:1px solid var(--hairline);padding:.35rem .1rem;margin-bottom:.8rem}
+.kw-input:focus{outline:none;border-bottom-color:var(--accent)}
+.kw-input::placeholder{color:var(--muted)}
+.board{margin:0;padding:0;list-style:none}
+.board li{display:flex;align-items:baseline;gap:.9rem;padding:.4rem .5rem;border-bottom:1px solid var(--rowline);cursor:pointer;transition:background .15s;animation:rowin .4s cubic-bezier(.16,1,.3,1) backwards}
+.board li:hover{background:var(--wash)}
+@keyframes rowin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.rank{flex:0 0 2rem;text-align:right;font-family:var(--fn);color:var(--muted)}
+.board li:nth-child(-n+3) .rank{color:var(--accent);font-weight:700;font-style:italic;font-size:1.2rem}
+.board .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .t a{color:inherit;text-decoration:none}
+.board .hv{font-family:var(--fn);font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.board-foot{display:flex;justify-content:flex-end;gap:.8rem;padding-top:.6rem;font-size:.75rem;color:var(--muted)}
+
+/* 趋势 */
+.trend-grid{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:1.5rem}
+@media(max-width:760px){.trend-grid{grid-template-columns:1fr}}
+.topic-list{max-height:430px;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid var(--hairline)}
+.topic-list li{padding:.42rem .5rem;border-bottom:1px solid var(--rowline);cursor:pointer;display:flex;gap:.6rem;align-items:baseline;font-size:.875rem}
+.topic-list li:hover{background:var(--wash)}
+.topic-list li[aria-selected="true"]{background:var(--wash);border-left:3px solid var(--accent);padding-left:.3rem}
+.panel{border:1px solid var(--hairline);padding:1.1rem 1.3rem;background:var(--wash)}
+.panel h3{margin:.1rem 0 .2rem;font-family:var(--fd);font-size:1.15rem}
+.stats{display:flex;gap:1.6rem;flex-wrap:wrap;margin:.7rem 0 1rem}
+.stat b{display:block;font-family:var(--fn);font-size:1.35rem;font-weight:400}
+.stat span{font-size:.7rem;color:var(--muted);letter-spacing:.08em}
+.spark{width:100%;height:120px}
+.spark-cap{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted)}
+
+/* 监控台 */
+.mon-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:800px){.mon-grid{grid-template-columns:1fr}}
+textarea.rules{width:100%;min-height:130px;font-family:var(--mono);font-size:.82rem;line-height:1.7;color:var(--ink);background:var(--wash);border:1px solid var(--hairline);border-radius:4px;padding:.7rem .85rem;resize:vertical}
+textarea.rules:focus{outline:none;border-color:var(--accent)}
+.parse-chips{margin:.5rem 0 .2rem;display:flex;gap:.4rem;flex-wrap:wrap;min-height:1.6em}
+.match-src{display:flex;justify-content:space-between;padding:.32rem .2rem;border-bottom:1px dashed var(--rowline);font-size:.85rem}
+.match-src b{font-family:var(--fn);font-weight:400;color:var(--accent)}
+.push-card{border:1px solid var(--hairline);border-radius:8px;padding:.9rem 1rem;background:var(--paper);font-size:.85rem;margin-top:.6rem}
+.push-card h4{margin:0 0 .4rem;font-size:.9rem;display:flex;align-items:center;gap:.5rem}
+.push-card h4::before{content:"";width:.55em;height:.55em;background:var(--accent);border-radius:3px;transform:rotate(45deg)}
+.push-card ol{margin:.2rem 0 0;padding-left:1.3rem}
+.push-card ol li{margin:.25rem 0}
+.push-card .meta{font-size:.7rem;color:var(--muted);margin-top:.5rem}
+
+/* API 探索器 */
+.api-grid{display:grid;grid-template-columns:260px 1fr;gap:1.5rem}
+@media(max-width:760px){.api-grid{grid-template-columns:1fr}}
+.api-list{margin:0;padding:0;list-style:none;border-top:1px solid var(--hairline)}
+.api-list li{padding:.5rem .5rem;border-bottom:1px solid var(--rowline);cursor:pointer;font-family:var(--mono);font-size:.78rem;display:flex;gap:.5rem;align-items:baseline}
+.api-list li:hover{background:var(--wash)}
+.api-list li[aria-selected="true"]{background:var(--wash);border-left:3px solid var(--accent);padding-left:.3rem}
+.method{font-size:.66rem;font-weight:700;padding:.05em .45em;border-radius:3px;color:var(--accent-ink);background:var(--accent);letter-spacing:.05em}
+.api-detail pre{background:light-dark(oklch(0.22 0.02 60), oklch(0.14 0.01 60));color:light-dark(oklch(0.92 0.01 80), oklch(0.88 0.01 80));padding:1rem 1.1rem;border-radius:6px;overflow:auto;font-size:.76rem;line-height:1.6;font-family:var(--mono);max-height:340px}
+.curl{display:flex;gap:.6rem;align-items:center;margin-top:.7rem}
+.curl code{flex:1;font-family:var(--mono);font-size:.72rem;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px dashed var(--hairline);padding:.4rem .6rem;border-radius:4px}
+.dep-note{margin-top:1.4rem;border-top:1px solid var(--hairline);padding-top:1rem;font-size:.85rem;color:var(--ink-soft)}
+.dep-note table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.5rem}
+.dep-note th,.dep-note td{text-align:left;padding:.35rem .6rem;border-bottom:1px solid var(--rowline)}
+.dep-note th{font-family:var(--fd);color:var(--ink);font-size:.78rem}
+
+footer{margin-top:2.5rem}
+footer p{margin:.7rem 0 0;font-size:.78rem;color:var(--ink-soft)}
+footer a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+footer .sub{color:var(--muted);font-size:.72rem}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <div class="brand">
+      <span class="seal">枢</span>
+      <h1>热点中枢<small>HOTSPOT HUB · 整合原型 v0.1</small></h1>
+    </div>
+    <div class="mast-meta">
+      <span id="metaDate"></span><br/>
+      <span>采集调度 5min · 快照保留 48 点 · 双端部署</span>
+    </div>
+  </header>
+  <div class="rule"></div>
+
+  <nav role="tablist" aria-label="站点导航">
+    <button role="tab" aria-selected="true" data-sec="daily">晨报</button>
+    <button role="tab" aria-selected="false" data-sec="boards">热榜</button>
+    <button role="tab" aria-selected="false" data-sec="trend">趋势</button>
+    <button role="tab" aria-selected="false" data-sec="monitor">监控台</button>
+    <button role="tab" aria-selected="false" data-sec="api">API</button>
+  </nav>
+
+  <main>
+    <!-- ================= 晨报 ================= -->
+    <section id="sec-daily">
+      <div class="sec-head">
+        <h2>每天 60 秒读懂世界</h2>
+        <span class="note">来源：60s API /v2/60s → GET /api/v1/digest</span>
+      </div>
+      <ol class="daily" id="dailyList"></ol>
+      <blockquote class="tip" id="dailyTip"></blockquote>
+    </section>
+
+    <!-- ================= 热榜 ================= -->
+    <section id="sec-boards" hidden>
+      <div class="sec-head">
+        <h2>实时热榜</h2>
+        <span class="note">7 路聚合 · 快照对比生成趋势标注 · GET /api/v1/boards/:source</span>
+      </div>
+      <div class="tabs" id="boardTabs"></div>
+      <input class="kw-input" id="kwInput" type="search" placeholder="关键词筛选：词A 词B 任一匹配 · +必含 · !排除" autocomplete="off" spellcheck="false" />
+      <ol class="board" id="boardList"></ol>
+      <div class="board-foot"><span id="boardFoot"></span></div>
+    </section>
+
+    <!-- ================= 趋势 ================= -->
+    <section id="sec-trend" hidden>
+      <div class="sec-head">
+        <h2>热点趋势追踪</h2>
+        <span class="note">排名时间线 · 峰值 / 在榜统计 · GET /api/v1/trends/:source</span>
+      </div>
+      <div class="tabs" id="trendTabs"></div>
+      <div class="trend-grid">
+        <ol class="topic-list" id="topicList"></ol>
+        <div class="panel" id="trendPanel"></div>
+      </div>
+    </section>
+
+    <!-- ================= 监控台 ================= -->
+    <section id="sec-monitor" hidden>
+      <div class="sec-head">
+        <h2>关键词监控台</h2>
+        <span class="note">TrendRadar 词法 · 实时匹配预览 · 推送卡片模拟</span>
+      </div>
+      <div class="mon-grid">
+        <div>
+          <textarea class="rules" id="rules" spellcheck="false"></textarea>
+          <div class="parse-chips" id="parseChips"></div>
+          <p class="note">空行分隔词组，组间为「或」关系：普通词任一命中即匹配；<b>+词</b>须同时出现；<b>!词</b>包含即排除；<b>@N</b> 限制组内条数。</p>
+          <div id="matchSummary"></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+            <strong style="font-family:var(--fd)">命中明细</strong>
+            <button class="btn" id="pushBtn" type="button">模拟推送预览 →</button>
+          </div>
+          <div id="matchList"></div>
+          <div id="pushPreview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= API ================= -->
+    <section id="sec-api" hidden>
+      <div class="sec-head">
+        <h2>开放 API</h2>
+        <span class="note">统一信封 { code, message, data, meta } · CORS 全开放 · 可选 Token</span>
+      </div>
+      <div class="api-grid">
+        <ol class="api-list" id="apiList"></ol>
+        <div class="api-detail">
+          <div id="apiDesc"></div>
+          <pre id="apiBody"></pre>
+          <div class="curl">
+            <code id="apiCurl"></code>
+            <button class="btn" id="copyBtn" type="button">复制</button>
+          </div>
+        </div>
+      </div>
+      <div class="dep-note">
+        <strong>部署兼容性</strong> —— 同一套核心逻辑，两种运行时：
+        <table>
+          <tr><th>层面</th><th>Cloudflare</th><th>自有 VPS</th></tr>
+          <tr><td>前端</td><td>Pages（静态资产）</td><td>Nginx / Node 静态托管</td></tr>
+          <tr><td>API</td><td>Workers Routes /api/*</td><td>Node (Express/Nitro) 或 Docker</td></tr>
+          <tr><td>存储</td><td>D1（SQLite 兼容）+ KV 缓存</td><td>SQLite（better-sqlite3）</td></tr>
+          <tr><td>调度采集</td><td>Cron Triggers</td><td>node-cron / systemd timer</td></tr>
+          <tr><td>推送</td><td>Queues / fetch webhook</td><td>fetch webhook（相同配置）</td></tr>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="rule"></div>
+    <p>
+      能力来源：<a href="https://github.com/vikiboss/60s" target="_blank" rel="noopener">vikiboss/60s</a> ·
+      <a href="https://github.com/newsnext/newsnow" target="_blank" rel="noopener">newsnext/newsnow</a> ·
+      <a href="https://github.com/sansan0/TrendRadar" target="_blank" rel="noopener">sansan0/TrendRadar</a>
+    </p>
+    <p class="sub">本页为交互原型，数据为内置演示数据；实际站点由采集层写入存储后经 /api/v1 输出。</p>
+  </footer>
+</div>
+
+<script>
+/* ================= 演示数据 ================= */
+
+const DIGEST = {
+  date: "2026-11-06", weekday: "星期五", lunar: "丙午年九月廿九",
+  news: [
+    "发改委：“十五五”时期我国将新建约 1.5 万公里铁路，时速 400 公里高铁稳步推进商业化运营",
+    "央行：下调股票回购增持再贷款利率 0.25 个百分点至 1%",
+    "商务部：前 9 个月我国服务进出口同比增长 8.5%，出口增长 14.8%",
+    "市场监管总局发布汽车召回通告：超 80 万辆汽车被召回，涉及奥迪、丰田、大众等品牌",
+    "官方确认：四川已消除血吸虫病，曾是我国血吸虫病重流行省之一",
+    "广东拟规定：手机、电话手表不得入校，义务教育阶段不得张榜公布考试成绩",
+    "第 140 届广交会闭幕：35.2 万名境外采购商到会，同比增长 12.2% 创历史新高",
+    "2027 QS 亚洲大学排名揭晓：香港大学蝉联榜首，北大第二，清华跃升第三",
+    "报告显示：红果用户数量超越豆包，移动互联网用户加速流向短剧和 AI",
+    "中国微短剧风靡全球：汉语拼音 duanju 成为专属英文单词",
+    "硫磺熏笋乱象曝光后，多地发通告：严禁工业硫磺用于任何食用农产品",
+    "韩媒：韩国总统访团 168 人信息被上传至付费网站，约 5 个月后知情",
+    "欧盟委员会：黑山有望 2028 年入盟，最早 2027 年 6 月签署协议",
+    "美媒预测：民主党夺回参议院；美众议长称输中期选举是历史规律",
+    "财政部：将在香港发行 2026 年第三期人民币国债，规模 120 亿元",
+  ],
+  tip: "眼下的艰难只是暂时的考验，扛过风雨，前方一定藏着不期而遇的惊喜",
+};
+
+const SOURCES = [
+  { key: "weibo",   label: "微博",   hotUnit: "热" },
+  { key: "douyin",  label: "抖音",   hotUnit: "热" },
+  { key: "zhihu",   label: "知乎",   hotUnit: "度" },
+  { key: "toutiao", label: "头条",   hotUnit: "热" },
+  { key: "rednote", label: "小红书", hotUnit: "分" },
+  { key: "baidu",   label: "百度",   hotUnit: "热" },
+  { key: "bilibili", label: "B站",  hotUnit: "播" },
+];
+
+// title, hot(万), delta(正=升), isNew
+const BOARDS_MOCK = {
+  weibo: [
+    ["我国秋粮收获已过九成", 86, 0], ["美股三大指数集体收涨", 40, 2], ["曝白小纯天早期天霸工资", 26, -1],
+    ["2027QS 亚洲大学排名揭晓", 18, 3, 1], ["央行下调再贷款利率至 1%", 15, 0], ["广交会闭幕创历史新高", 12, -2],
+    ["微短剧出海 duanju 成英文单词", 9, 5, 1], ["四川正式消除血吸虫病", 7, -1], ["韩国总统访团信息泄露事件", 6, 1],
+    ["广东拟禁止手机入校", 5, 0], ["黑山有望 2028 年入盟", 4, -3], ["短剧用户规模超越 AI 助手", 3, 2, 1],
+  ],
+  douyin: [
+    ["WTT 法兰克福：王楚钦晋级四强", 1211, 1], ["神舟二十号乘组状态良好", 890, 0], ["ivers 首支中文单曲上线", 776, 4, 1],
+    ["高铁 400 公里商业化试运行", 533, -1], ["萌娃背古诗火出圈", 421, 0], ["秋天第一场雪来了", 388, 2],
+    ["狗狗陪主人跑完马拉松", 300, -2], ["大学生发明自清洁水杯", 256, 1, 1], ["90 岁爷爷第一次坐飞机", 198, 0],
+    ["非遗鱼灯点亮古镇夜", 155, -1],
+  ],
+  zhihu: [
+    ["如何评价时速 400 公里高铁商业化运营？", 1915, 0], ["央行再贷款利率下调影响几何？", 1204, 2],
+    ["四川消除血吸虫病意味着什么？", 988, -1], ["为什么年轻人开始流行微短剧？", 855, 1],
+    ["QS 排名能反映真实水平吗？", 702, 3, 1], ["如何看待汽车大规模召回？", 640, -2],
+    [" 广交会创新高背后的外贸信号", 512, 0], ["AI 会取代翻译吗？", 430, 1],
+    ["手机禁止入校是否合理？", 377, -1], ["黑山入盟对欧洲格局的影响", 290, 0],
+  ],
+  toutiao: [
+    ["阔直板手机为什么火了", 1916, 0], ["参保人数减少 8300 万？医保局回应", 1500, 1],
+    ["400 公里高铁票价如何定", 1240, 2], ["秋粮收购进度创五年新高", 980, -1],
+    ["短剧市场规模明年或破千亿", 866, 3, 1], ["多家车企公布 10 月销量", 700, 0],
+    ["香港大学蝉联亚洲第一", 588, -2], ["冬季流感疫苗接种指南发布", 450, 1],
+    ["国产大飞机 C929 有新进展", 390, 0], ["这个冬天会是暖冬吗", 300, -1],
+  ],
+  rednote: [
+    ["用万能旅行拍照姿势美美出片", 947, 0], ["秋冬治愈系穿搭合集", 855, 2], ["一人食晚餐 15 分钟搞定", 790, -1],
+    ["高铁 4 小时可达的小城推荐", 640, 1], ["打工人桌面改造计划", 533, 0], ["微短剧里的同款取景地", 421, 4, 1],
+    ["国货护肤品成分党测评", 380, -2], ["考研自习室 vlog", 300, 0], ["第一次跑半马的经验贴", 255, 1],
+    ["旧毛衣改造猫咪窝", 198, -1],
+  ],
+  baidu: [
+    ["相约四叶草 共享中国机遇", 790, 0], ["央行宣布降息落地", 720, 1], ["医保局回应参保人数变化", 655, -1],
+    ["QS 亚洲排名出炉", 588, 2], ["东北今冬首场大雪", 500, 0], ["AI 眼镜新品扎堆发布", 433, 3, 1],
+    ["中国短剧出海收入翻倍", 377, 0], ["个别国家欲干涉台海 中方回应", 320, -2],
+    ["90 后成为非遗传承主力", 266, 0], ["今冬电力供应有保障吗", 210, -1],
+  ],
+  bilibili: [
+    ["大家好，这里是 DeepSeek，正式入驻 B 站！", 392, 0], ["【4K】400km/h 高铁驾驶室第一视角", 350, 1],
+    ["盘点 2026 年十大科技突破", 288, -1], ["王楚钦 vs 温瑞博 集锦", 255, 2],
+    ["小白也能懂的降息解读", 210, 0], ["用 AI 复原千年前的长安城", 188, 3, 1],
+    ["微短剧拍摄幕后大揭秘", 150, -2], ["一个月冲刺考研政治规划", 122, 0],
+    ["雪豹幼崽第一次下山", 98, 0], ["自制可控核聚变装置（真）", 77, 1],
+  ],
+};
+
+const BOARD_UPDATED = { weibo: "10 分钟前", douyin: "8 分钟前", zhihu: "12 分钟前", toutiao: "5 分钟前", rednote: "6 分钟前", baidu: "9 分钟前", bilibili: "7 分钟前" };
+
+/* ================= 工具 ================= */
+
+const $ = (id) => document.getElementById(id);
+const seeded = (str) => { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h ^= h >>> 13; return (h >>> 0) / 4294967296; }; };
+const fmtHot = (w) => (w >= 10000 ? (w / 10000).toFixed(1) + "亿" : w + "万");
+
+/* ================= 导航 ================= */
+
+document.querySelectorAll("nav [data-sec]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("nav [data-sec]").forEach((b) => b.setAttribute("aria-selected", b === btn));
+    for (const s of ["daily", "boards", "trend", "monitor", "api"]) $("sec-" + s).hidden = s !== btn.dataset.sec;
+  });
+});
+const goto = (sec) => document.querySelector(`nav [data-sec="${sec}"]`).click();
+
+$("metaDate").textContent = `${DIGEST.date} ${DIGEST.weekday} · ${DIGEST.lunar}`;
+
+/* ================= 晨报 ================= */
+
+(() => {
+  $("dailyList").innerHTML = DIGEST.news.map((t) => `<li>${t}</li>`).join("");
+  $("dailyTip").textContent = `「 ${DIGEST.tip} 」`;
+})();
+
+/* ================= 热榜 ================= */
+
+let curBoard = "weibo", kwQuery = "";
+
+function boardItems(key) {
+  return BOARDS_MOCK[key].map(([title, hot, delta, isNew], i) => ({ title, hot, delta, isNew: !!isNew, rank: i + 1 }));
+}
+
+function parseKW(q) {
+  const plain = [], must = [], excl = [];
+  for (const t of q.trim().split(/\s+/).filter(Boolean)) {
+    if (t.startsWith("+") && t.length > 1) must.push(t.slice(1));
+    else if (t.startsWith("!") && t.length > 1) excl.push(t.slice(1));
+    else plain.push(t);
+  }
+  return { plain, must, excl };
+}
+const kwMatch = (title, k) =>
+  !k.excl.some((w) => title.includes(w)) &&
+  (!k.must.length || k.must.every((w) => title.includes(w))) &&
+  (!k.plain.length || k.plain.some((w) => title.includes(w)));
+
+function trendHTML(it) {
+  if (it.isNew) return `<span class="trend new" title="新上榜">新</span>`;
+  if (it.delta > 0) return `<span class="trend up" title="上升 ${it.delta} 位">▲${it.delta}</span>`;
+  if (it.delta < 0) return `<span class="trend down" title="下降 ${-it.delta} 位">▼${-it.delta}</span>`;
+  if (it.delta === 0) return `<span class="trend flat" title="排名持平">—</span>`;
+  return "";
+}
+
+function renderTabs(hostId, activeKey, onPick) {
+  const host = $(hostId);
+  host.innerHTML = "";
+  SOURCES.forEach((s) => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.type = "button"; b.textContent = s.label;
+    b.setAttribute("aria-selected", String(s.key === activeKey));
+    b.addEventListener("click", () => onPick(s.key));
+    host.appendChild(b);
+  });
+}
+
+function renderBoard() {
+  renderTabs("boardTabs", curBoard, (k) => { curBoard = k; renderBoard(); });
+  const items = boardItems(curBoard);
+  const k = parseKW(kwQuery);
+  const filtered = kwQuery.trim() ? items.filter((it) => kwMatch(it.title, k)) : items;
+  $("boardList").innerHTML = filtered
+    .map((it, i) => `<li data-title="${it.title}" title="查看趋势">
+      <span class="rank">${String(i + 1).padStart(2, "0")}</span>
+      <span class="t">${it.title}${trendHTML(it)}</span>
+      <span class="hv">${fmtHot(it.hot)}</span></li>`)
+    .join("");
+  $("boardFoot").textContent =
+    (filtered.length !== items.length ? `${filtered.length}/${items.length} 条 · ` : "") +
+    `更新于 ${BOARD_UPDATED[curBoard]} · 点击条目查看趋势`;
+  $("boardList").querySelectorAll("li").forEach((li) =>
+    li.addEventListener("click", () => { goto("trend"); selectTopic(curBoard, li.dataset.title); }));
+}
+let kwTimer;
+$("kwInput").addEventListener("input", (e) => { clearTimeout(kwTimer); kwTimer = setTimeout(() => { kwQuery = e.target.value; renderBoard(); }, 150); });
+
+/* ================= 趋势 ================= */
+
+let curTrendSrc = "weibo", curTopic = null;
+
+function timeline(title, points = 12) {
+  const rnd = seeded(title);
+  const cur = boardItems(curTrendSrc).find((it) => it.title === title);
+  let rank = cur ? cur.rank + Math.floor(rnd() * 8) : 5 + Math.floor(rnd() * 15);
+  const out = [];
+  for (let i = 0; i < points; i++) {
+    rank = Math.max(1, Math.min(50, rank + Math.floor((rnd() - 0.48) * 7)));
+    out.push(rank);
+  }
+  if (cur) out[points - 1] = cur.rank;
+  return out;
+}
+
+function renderTopicList() {
+  renderTabs("trendTabs", curTrendSrc, (k) => { curTrendSrc = k; curTopic = null; renderTopicList(); });
+  const items = boardItems(curTrendSrc);
+  if (!curTopic) curTopic = items[0].title;
+  $("topicList").innerHTML = items
+    .map((it) => `<li data-title="${it.title}" aria-selected="${it.title === curTopic}">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.title}</span>${trendHTML(it)}</li>`)
+    .join("");
+  $("topicList").querySelectorAll("li").forEach((li) =>
+    li.addEventListener("click", () => selectTopic(curTrendSrc, li.dataset.title)));
+  renderTrendPanel();
+}
+
+function selectTopic(src, title) {
+  if (curTrendSrc !== src) { curTrendSrc = src; curTopic = null; renderTopicList(); }
+  curTopic = title;
+  $("topicList").querySelectorAll("li").forEach((li) =>
+    li.setAttribute("aria-selected", String(li.dataset.title === title)));
+  renderTrendPanel();
+}
+
+function renderTrendPanel() {
+  const tl = timeline(curTopic);
+  const best = Math.min(...tl), first = tl[0], now = tl[tl.length - 1];
+  const rising = now < first;
+  const W = 420, H = 110, pad = 6;
+  const max = Math.max(...tl), min = best;
+  const xy = tl.map((r, i) => [pad + (i * (W - 2 * pad)) / (tl.length - 1), pad + ((r - min) / Math.max(1, max - min)) * (H - 2 * pad)]);
+  const path = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const area = path + ` L ${W - pad} ${H - pad} L ${pad} ${H - pad} Z`;
+  $("trendPanel").innerHTML = `
+    <h3>${curTopic}</h3>
+    <span class="chip">${SOURCES.find((s) => s.key === curTrendSrc).label}</span>
+    ${rising ? '<span class="chip" style="border-color:var(--accent);color:var(--accent)">热度上升</span>' : '<span class="chip">热度回落</span>'}
+    <div class="stats">
+      <div class="stat"><b>#${now}</b><span>当前排名</span></div>
+      <div class="stat"><b>#${best}</b><span>峰值排名</span></div>
+      <div class="stat"><b>${tl.filter((r) => r <= 10).length}</b><span>前十时段</span></div>
+      <div class="stat"><b>${first > now ? "▲" : first < now ? "▼" : "—"}</b><span>较 1 小时前</span></div>
+    </div>
+    <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${area}" fill="var(--accent)" opacity="0.08"/>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1]}" r="3.5" fill="var(--accent)"/>
+    </svg>
+    <div class="spark-cap"><span>12 小时前</span><span>排名越低越高（y 轴倒序）</span><span>现在</span></div>`;
+}
+
+/* ================= 监控台 ================= */
+
+const DEFAULT_RULES = `高铁\n400 公里\n+销量 !召回\n@3\n\n微短剧\n+出海\n\nAI`;
+
+function parseRules(text) {
+  return text.split(/\n\s*\n/).map((g) => {
+    let limit = Infinity;
+    const plain = [], must = [], excl = [];
+    for (const tok of g.split(/\s+/).filter(Boolean)) {
+      if (tok.startsWith("@")) limit = Math.max(1, parseInt(tok.slice(1)) || 1);
+      else if (tok.startsWith("+") && tok.length > 1) must.push(tok.slice(1));
+      else if (tok.startsWith("!") && tok.length > 1) excl.push(tok.slice(1));
+      else plain.push(tok);
+    }
+    return { plain, must, excl, limit, group: g.replace(/\s+/g, " ").trim() };
+  }).filter((g) => g.plain.length || g.must.length);
+}
+
+const groupMatch = (title, g) =>
+  !g.excl.some((w) => title.includes(w)) &&
+  (!g.must.length || g.must.every((w) => title.includes(w))) &&
+  (!g.plain.length || g.plain.some((w) => title.includes(w)));
+
+function runMonitor() {
+  const groups = parseRules($("rules").value);
+  $("parseChips").innerHTML = groups
+    .map((g) => `<span class="chip" style="border-color:var(--accent);color:var(--accent)">组：${g.group}${g.limit !== Infinity ? " @" + g.limit : ""}</span>`)
+    .join("") || '<span class="chip">未解析到有效词组</span>';
+
+  const all = [];
+  const summary = SOURCES.map((s) => {
+    let n = 0;
+    for (const g of groups) {
+      let m = boardItems(s.key).filter((it) => groupMatch(it.title, g));
+      if (m.length) { all.push({ ...m[0], src: s.label, srcKey: s.key }); n += m.length; }
+    }
+    return `<div class="match-src"><span>${s.label}</span><b>${n} 条</b></div>`;
+  }).join("");
+  $("matchSummary").innerHTML = `<p class="note" style="margin:.6rem 0 .2rem">各源命中数（每组取代表条目）</p>${summary}`;
+
+  const shown = all.slice(0, 8);
+  $("matchList").innerHTML = shown.length
+    ? `<ol class="board">${shown.map((it) => `<li style="animation:none"><span class="rank">${it.rank}</span><span class="t">${it.title}${trendHTML(it)}</span><span class="chip">${it.src}</span></li>`).join("")}</ol>`
+    : '<p class="note">当前词组暂无命中。</p>';
+  runMonitor._all = all;
+}
+
+$("rules").value = DEFAULT_RULES;
+$("rules").addEventListener("input", runMonitor);
+
+$("pushBtn").addEventListener("click", () => {
+  const all = runMonitor._all || [];
+  const top = all.slice(0, 5);
+  $("pushPreview").innerHTML = top.length
+    ? `<div class="push-card"><h4>热点中枢 · 关键词监控简报</h4>
+       <ol>${top.map((it) => `<li><b>[${it.src}]</b> ${it.title} ${trendHTML(it)}</li>`).join("")}</ol>
+       <div class="meta">共 ${all.length} 条命中 · 推送渠道：飞书 / 钉钉 / Telegram / Webhook（可多选） · 推送模式：增量 incremental</div></div>`
+    : '<p class="note">无命中内容可推送。</p>';
+});
+
+/* ================= API 探索器 ================= */
+
+const ENVELOPE = (data, updated) => ({ code: 200, message: "ok", data, meta: { updated_at: "2026-11-06T10:05:00+08:00", cached: true } });
+
+const APIS = [
+  {
+    path: "/api/v1/sources", m: "GET",
+    desc: "数据源目录与健康状态。返回全部采集源、适配器类型（60s/newsnow）、最近成功采集时间与可用性。",
+    body: ENVELOPE(SOURCES.map((s) => ({ id: s.key, name: s.label, adapter: s.key === "bilibili" || s.key === "baidu" ? "newsnow" : "60s", last_ok: "2026-11-06T10:05:00+08:00", healthy: true }))),
+  },
+  {
+    path: "/api/v1/boards/weibo?limit=5", m: "GET",
+    desc: "某数据源当前榜单（含趋势标注 delta / is_new）。支持 format=json|markdown 双格式输出。",
+    body: ENVELOPE(boardItems("weibo").slice(0, 5).map((it) => ({ rank: it.rank, title: it.title, url: "https://s.weibo.com/weibo?q=…", hot_value: it.hot * 10000, trend: { delta: it.delta, is_new: it.isNew } })),),
+  },
+  {
+    path: "/api/v1/trends/zhihu?hours=12", m: "GET",
+    desc: "排名时间线与聚合统计（峰值、在榜次数、首次/最近收录），供趋势分析与内容选题参考。",
+    body: ENVELOPE({ source: "zhihu", hours: 12, topics: [{ title: "如何评价时速 400 公里高铁商业化运营？", current_rank: 1, peak_rank: 1, board_count: 9, first_seen: "2026-11-05T08:00:00+08:00", timeline: timeline("如何评价时速 400 公里高铁商业化运营？") }] }),
+  },
+  {
+    path: "/api/v1/digest", m: "GET",
+    desc: "每天 60 秒读懂世界：日期、农历、15 条要闻、每日微语与日报图。可作为内容创作的晨报素材接口。",
+    body: ENVELOPE({ date: DIGEST.date, day_of_week: DIGEST.weekday, lunar_date: DIGEST.lunar, news: DIGEST.news.slice(0, 3).concat(["…共 15 条"]), tip: DIGEST.tip, image: "https://…/2026-11-06.png" }),
+  },
+  {
+    path: "/api/v1/matches?words=微短剧&sources=all", m: "GET",
+    desc: "关键词监控结果查询：按 TrendRadar 词法（+必含 / !排除 / @限量）在指定源中检索命中条目，供选题系统轮询。",
+    body: ENVELOPE({ groups: 2, matches: [{ group: "微短剧", source: "weibo", items: [{ rank: 7, title: "微短剧出海 duanju 成英文单词", url: "https://s.weibo.com/…", trend: { delta: 5, is_new: true } }] }] }),
+  },
+  {
+    path: "/api/v1/history/weibo?limit=3", m: "GET",
+    desc: "原始快照历史（时间 + 全量排名），可导出供自建分析 / 大模型训练语料使用。",
+    body: ENVELOPE({ source: "weibo", snapshots: [{ taken_at: "2026-11-06T09:55:00+08:00", items: 50 }, { taken_at: "2026-11-06T10:00:00+08:00", items: 50 }, { taken_at: "2026-11-06T10:05:00+08:00", items: 50 }] }),
+  },
+];
+
+function renderAPI(i) {
+  const a = APIS[i];
+  $("apiList").querySelectorAll("li").forEach((li, j) => li.setAttribute("aria-selected", String(i === j)));
+  $("apiDesc").innerHTML = `<p style="margin:.1rem 0 .6rem"><span class="method">${a.m}</span> <code style="font-family:var(--mono);font-size:.85rem">${a.path}</code></p><p class="note" style="margin:0 0 .8rem">${a.desc}</p>`;
+  $("apiBody").textContent = JSON.stringify(a.body, null, 2);
+  $("apiCurl").textContent = `curl "https://your-domain.example${a.path}"`;
+  $("copyBtn").onclick = () => navigator.clipboard?.writeText($("apiCurl").textContent);
+}
+$("apiList").innerHTML = APIS.map((a, i) => `<li data-i="${i}"><span class="method">${a.m}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.path.split("?")[0]}</span></li>`).join("");
+$("apiList").querySelectorAll("li").forEach((li) => li.addEventListener("click", () => renderAPI(+li.dataset.i)));
+
+/* ================= 启动 ================= */
+
+renderBoard();
+renderTopicList();
+runMonitor();
+renderAPI(0);
+</script>
+</body>
+</html>

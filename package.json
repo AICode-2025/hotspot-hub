@@ -1,0 +1,12 @@
+{
+  "name": "hotspot-aggregator",
+  "version": "1.0.0",
+  "description": "热点聚合站：每天 60 秒读懂世界 + 多平台热搜榜（数据来自 60s API 与 NewsNow）",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

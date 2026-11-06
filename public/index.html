@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="热点晨报 — 每天 60 秒读懂世界，聚合国内外 49 路热点源（国内/国际/科技/财经/社会）" />
+  <title>热点晨报 · 国内外热点聚合</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23a8322a'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='%23f7f2e7' font-family='serif' font-weight='bold'%3E热%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="sheet">
+
+    <!-- 报头 -->
+    <header class="masthead">
+      <div class="masthead-brand">
+        <span class="brand-seal" aria-hidden="true">热</span>
+        <h1 class="brand-title">热点晨报</h1>
+      </div>
+      <div class="masthead-meta" id="mastheadMeta">
+        <span class="meta-line" id="metaDate">—</span>
+        <span class="meta-line" id="metaLunar"></span>
+      </div>
+    </header>
+
+    <div class="rule-double" role="presentation"></div>
+
+    <main>
+      <!-- 60 秒读懂世界 -->
+      <section class="daily" aria-labelledby="dailyTitle">
+        <div class="section-head">
+          <h2 class="section-title" id="dailyTitle">每天 60 秒读懂世界</h2>
+          <a class="daily-image-link" id="dailyImageLink" href="#" target="_blank" rel="noopener" hidden>
+            今日日报图 <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+        <ol class="daily-list" id="dailyList">
+          <li class="skeleton" style="width:92%"></li>
+          <li class="skeleton" style="width:85%"></li>
+          <li class="skeleton" style="width:96%"></li>
+          <li class="skeleton" style="width:78%"></li>
+          <li class="skeleton" style="width:90%"></li>
+        </ol>
+        <blockquote class="daily-tip" id="dailyTip" hidden>
+          <p id="dailyTipText"></p>
+        </blockquote>
+        <p class="error-box" id="dailyError" hidden>
+          新闻加载失败 <button class="retry-btn" data-retry="daily" type="button">重试</button>
+        </p>
+      </section>
+
+      <!-- 实时热榜（多源卡片网格） -->
+      <section class="boards" aria-labelledby="boardsTitle">
+        <div class="section-head">
+          <h2 class="section-title" id="boardsTitle">实时热榜</h2>
+          <span class="boards-note" id="boardsNote">加载中…</span>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="分类切换" id="catTabs"></div>
+
+        <div class="kw-bar">
+          <input
+            class="kw-input"
+            id="kwInput"
+            type="search"
+            placeholder="跨源关键词筛选：词A 词B 任一匹配 · +必含 · !排除"
+            aria-label="关键词筛选"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+
+        <div class="card-grid" id="cardGrid"></div>
+      </section>
+
+      <!-- 趋势追踪 -->
+      <section class="boards" aria-labelledby="trendTitle">
+        <div class="section-head">
+          <h2 class="section-title" id="trendTitle">热点趋势追踪</h2>
+          <span class="boards-note">点击左侧话题查看排名时间线（随快照积累逐步精确）</span>
+        </div>
+        <div class="trend-grid">
+          <div>
+            <div class="tabs tabs-scroll" role="tablist" aria-label="数据源切换" id="trendTabs"></div>
+            <ol class="topic-list" id="topicList"></ol>
+          </div>
+          <div class="trend-panel" id="trendPanel"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="colophon">
+      <div class="rule-double" role="presentation"></div>
+      <p>
+        数据来源：
+        <a href="https://github.com/vikiboss/60s" target="_blank" rel="noopener">vikiboss/60s</a>
+        ·
+        <a href="https://github.com/newsnext/newsnow" target="_blank" rel="noopener">newsnext/newsnow</a>
+        ·
+        <a href="https://github.com/sansan0/TrendRadar" target="_blank" rel="noopener">sansan0/TrendRadar</a>
+      </p>
+      <p class="colophon-sub">内容由上游接口聚合，仅供参考；各源可用性随网络环境自动探测</p>
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

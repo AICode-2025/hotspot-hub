@@ -1,0 +1,12 @@
+# 运行时数据
+data/history.json
+*.log
+
+# 构建产物（工作流中使用 dist/ 作为上传目录）
+dist/
+
+# 依赖与编辑器
+node_modules/
+.DS_Store
+.idea/
+.vscode/
